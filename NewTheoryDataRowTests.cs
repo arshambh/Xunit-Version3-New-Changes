@@ -286,4 +286,132 @@ public class NewTheoryDataRowTests
     {
         Assert.Equal(squared, value * value);
     }
+
+    // =================================================================
+    // Matrix theory data: MatrixTheoryData<T1, T2, ...> merges two or more
+    // data dimensions by generating the matrix of them,
+    // so a theory can be fed every combination without hand-writing rows.
+    // https://xunit.net/docs/getting-started/v3/whats-new#matrix-theory-data
+    // =================================================================
+
+    // The example from the docs: 3 int values x 2 string values become 6 rows.
+    // MatrixTheoryData<...> derives from TheoryData<...>, so it is used exactly
+    // like any other theory data source (and its rows are ordinary theory data
+    // rows, so the metadata patterns above apply to them as well).
+    public static TheoryData<int, string> MatrixData => new MatrixTheoryData<int, string>(
+        [42, 2112, 2600],  // dimension 1
+        ["Hello", "World"] // dimension 2
+    );
+
+    [Theory]
+    [MemberData(nameof(MatrixData))]
+    public void MatrixTheoryData_TwoDimensions(int value, string text)
+    {
+        IEnumerable<int> values = [42, 2112, 2600];
+        IEnumerable<string> texts = ["Hello", "World"];
+
+        Assert.Contains(value, values);
+        Assert.Contains(text, texts);
+    }
+
+    /// <summary>
+    /// A matrix expands to every combination, walking the first dimension as the
+    /// outer loop, which is the order in which the docs list the rows.
+    /// </summary>
+    [Fact]
+    public void MatrixTheoryData_TwoDimensions_ExpandsToEveryCombination()
+    {
+        IEnumerable<(int, string)> expected =
+        [
+            (42, "Hello"),
+            (42, "World"),
+            (2112, "Hello"),
+            (2112, "World"),
+            (2600, "Hello"),
+            (2600, "World"),
+        ];
+
+        // Rows are strongly typed, so each row exposes its values as a tuple.
+        var actual = MatrixData.Select(row => row.Data).ToArray();
+
+        Assert.Equal(6, MatrixData.Count);
+        Assert.Equal<(int, string)>(expected, actual);
+    }
+
+    // More dimensions just mean more sequences: three dimensions of two values
+    // each generate 2 x 2 x 2 = 8 rows. (The docs describe combining 2-5 data
+    // sets; the package used here also ships generic versions up to 15.)
+    public static TheoryData<int, string, bool> ThreeDimensionMatrixData =>
+        new MatrixTheoryData<int, string, bool>(
+            [1, 2],
+            ["a", "b"],
+            [true, false]
+        );
+
+    [Theory]
+    [MemberData(nameof(ThreeDimensionMatrixData))]
+    public void MatrixTheoryData_ThreeDimensions(int value, string text, bool flag)
+    {
+        IEnumerable<int> values = [1, 2];
+        IEnumerable<string> texts = ["a", "b"];
+        IEnumerable<bool> flags = [true, false];
+
+        Assert.Contains(value, values);
+        Assert.Contains(text, texts);
+        Assert.Contains(flag, flags);
+    }
+
+    [Fact]
+    public void MatrixTheoryData_ThreeDimensions_ExpandsToEveryCombination()
+    {
+        Assert.Equal(8, ThreeDimensionMatrixData.Count);
+    }
+
+    // An empty dimension would silently generate no rows at all, so the
+    // constructor rejects empty (and null) dimensions instead.
+    [Fact]
+    public void MatrixTheoryData_EmptyDimension_Throws()
+    {
+        var firstDimensionEmpty = Assert.Throws<ArgumentException>(
+            () => new MatrixTheoryData<int, string>([], ["Hello"])
+        );
+
+        Assert.Contains("Data dimension cannot be empty", firstDimensionEmpty.Message);
+        Assert.Equal("dimension1", firstDimensionEmpty.ParamName);
+
+        var secondDimensionEmpty = Assert.Throws<ArgumentException>(
+            () => new MatrixTheoryData<int, string>([42], [])
+        );
+
+        Assert.Equal("dimension2", secondDimensionEmpty.ParamName);
+    }
+
+    // A hand-written row (with any of the metadata patterns shown above) can be
+    // mixed in with the generated ones through the inherited collection
+    // initializer support, because MatrixTheoryData<...> is a TheoryData<...>.
+    public static TheoryData<int, int> MatrixWithExtraRowData =>
+        new MatrixTheoryData<int, int>([1, 2], [10, 20])
+        {
+            new TheoryDataRow<int, int>(3, 30) { TestDisplayName = "not part of the matrix" },
+        };
+
+    [Theory]
+    [MemberData(nameof(MatrixWithExtraRowData))]
+    public void MatrixTheoryData_MixedWithHandWrittenRow(int value, int multiplier)
+    {
+        IEnumerable<int> values = [1, 2, 3];
+        IEnumerable<int> multipliers = [10, 20, 30];
+
+        Assert.Contains(value, values);
+        Assert.Contains(multiplier, multipliers);
+    }
+
+    [Fact]
+    public void MatrixTheoryData_MixedWithHandWrittenRow_KeepsRowMetadata()
+    {
+        Assert.Equal(5, MatrixWithExtraRowData.Count); // 2 x 2 matrix + 1 hand-written row
+
+        // The hand-written row keeps its own metadata on the row itself.
+        Assert.Equal("not part of the matrix", MatrixWithExtraRowData.Last().TestDisplayName);
+    }
 }
