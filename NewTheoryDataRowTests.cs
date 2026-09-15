@@ -125,10 +125,10 @@ public class NewTheoryDataRowTests
     // using this name instead of the default "(value: 12, squared: 144)".
     // =================================================================
 
-    public static TheoryData<int, int> TestDisplayNameRows => new()
-    {
-        new TheoryDataRow<int, int>(12, 144) { TestDisplayName = "twelve squared is one forty-four" },
-    };
+    public static TheoryData<int, int> TestDisplayNameRows =>
+    [
+        new TheoryDataRow<int, int>(12, 144) { TestDisplayName = "twelve squared is one forty-four" }
+    ];
 
     [Theory]
     [MemberData(nameof(TestDisplayNameRows))]
@@ -143,10 +143,10 @@ public class NewTheoryDataRowTests
     // than fast ones rather than applying one timeout to the whole theory.
     // =================================================================
 
-    public static TheoryData<int, int> TimeoutRows => new()
-    {
-        new TheoryDataRow<int, int>(13, 169) { Timeout = 30 },
-    };
+    public static TheoryData<int, int> TimeoutRows =>
+    [
+        new TheoryDataRow<int, int>(13, 169) { Timeout = 30 }
+    ];
 
     [Theory]
     [MemberData(nameof(TimeoutRows))]
@@ -158,20 +158,43 @@ public class NewTheoryDataRowTests
     // =================================================================
     // Row metadata: traits. Traits attached to a row are merged with the
     // traits applied to the test method/class, so a theory can carry
-    // per-row categorization.
+    // per-row categorization. See the doc comment on Metadata_Traits below
+    // for how to run only this row with the trait filter.
     // =================================================================
 
-    public static TheoryData<int, int> TraitRows => new()
-    {
+    public static TheoryData<int, int> TraitRows =>
+    [
         new TheoryDataRow<int, int>(14, 196)
         {
             Traits = new Dictionary<string, HashSet<string>>
             {
-                ["Category"] = new HashSet<string> { "row-metadata" },
+                ["Category"] = ["row-metadata"],
             },
-        },
-    };
+        }
 
+    ];
+
+    /// <summary>
+    /// Demonstrates a trait attached to a single theory data row, and how to run
+    /// only that row with the Microsoft.Testing.Platform (MTP) trait filter.
+    ///
+    /// Run just this row (matches the row's Category trait value above):
+    ///
+    ///     dotnet test -- --filter-trait "Category=row-metadata"
+    ///
+    /// The "--" separator is required so the argument is passed to MTP rather than
+    ///
+    /// Note: "--filter-trait" is an MTP switch; it is handled when the test app is
+    /// launched through "dotnet test". Running the test executable directly (or via
+    /// "dotnet run") uses the xUnit.net console-style options instead, where the
+    /// equivalent is:
+    ///
+    ///     xunit3.exe -trait "Category=row-metadata" -preEnumerateTheories
+    ///
+    /// "-preEnumerateTheories" is required there because discovery-time filtering
+    /// needs the row's traits to be known: without pre-enumeration the theory is a
+    /// single test case at discovery time, so the filter matches nothing.
+    /// </summary>
     [Theory]
     [MemberData(nameof(TraitRows))]
     public void Metadata_Traits(int value, int squared)
@@ -202,7 +225,7 @@ public class NewTheoryDataRowTests
             Timeout = 30,
             Traits = new Dictionary<string, HashSet<string>>
             {
-                ["Category"] = new HashSet<string> { "property-pattern" },
+                ["Category"] = ["property-pattern"],
             },
         },
 
