@@ -339,8 +339,7 @@ public class NewTheoryDataRowTests
     }
 
     // More dimensions just mean more sequences: three dimensions of two values
-    // each generate 2 x 2 x 2 = 8 rows. (The docs describe combining 2-5 data
-    // sets; the package used here also ships generic versions up to 15.)
+    // each generate 2 x 2 x 2 = 8 rows.
     public static TheoryData<int, string, bool> ThreeDimensionMatrixData =>
         new MatrixTheoryData<int, string, bool>(
             [1, 2],
